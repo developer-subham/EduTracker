@@ -1,0 +1,696 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EduTracker — Study Tracker</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#0b1220;
+      --card:#0f1720;
+      --accent:#6c8cff;
+      --muted:#9aa7c7;
+      --glass: rgba(255,255,255,0.04);
+    }
+    body{
+      background: linear-gradient(180deg, #061022 0%, #081426 60%);
+      color: #e6eef8;
+      font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      padding-bottom: 60px;
+    }
+    .navbar, .footer {
+      background: linear-gradient(90deg, rgba(12,20,32,0.6), rgba(8,12,20,0.7));
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border: 1px solid rgba(255,255,255,0.04);
+      color: var(--muted);
+    }
+    .accent {
+      color: var(--accent);
+    }
+    .btn-accent{
+      background: linear-gradient(90deg, #4f6cff, #8a6bff);
+      border: none;
+      color: white;
+    }
+    .small-muted { color: #9fb0d9; font-size: .9rem; }
+    .profile-circle{
+      width:60px;height:60px;border-radius:50%;
+      background: linear-gradient(135deg,#23385f,#5b62b3);
+      display:flex;align-items:center;justify-content:center;font-weight:700;color:white;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.5);
+    }
+    .stat {
+      color: white; font-weight:700; font-size:1.1rem;
+    }
+    .note { font-size:.85rem; color: #9fb0d9; }
+    .chip { font-size: .85rem; padding: .2rem .6rem; border-radius: 999px; background: rgba(255,255,255,0.03); color:var(--muted); border: 1px solid rgba(255,255,255,0.02);}
+    footer { color: #9fb0d9; padding: 1rem 0; text-align:center; margin-top:2rem; }
+    @media (max-width:767px){
+      .profile-circle { width:50px;height:50px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- NAV -->
+  <nav class="navbar navbar-expand-lg py-3 px-3 mb-4">
+    <div class="container-fluid">
+      <div class="d-flex align-items-center gap-3">
+        <div class="profile-circle">ET</div>
+        <div>
+          <div class="h5 mb-0">EduTracker</div>
+          <div class="small-muted">Track your study. Build your habit.</div>
+        </div>
+      </div>
+
+      <div class="ms-auto d-flex align-items-center gap-3">
+        <div class="text-end me-2">
+          <div id="studentNameDisplay" class="fw-semibold">Guest Student</div>
+        </div>
+        <button class="btn btn-sm btn-outline-light" data-bs-toggle="modal" data-bs-target="#profileModal"><i class="bi bi-person-fill me-1"></i> Profile</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <div class="container">
+    <div class="row g-4">
+      <!-- LEFT COLUMN -->
+      <div class="col-lg-4">
+        <!-- Profile / Goal Card -->
+        <div class="card p-3 mb-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="profile-circle" id="profileInitial">E</div>
+            <div>
+              <div id="studentNameCard" class="h5 mb-0">Guest Student</div>
+              <div class="small-muted">Welcome to EduTracker</div>
+            </div>
+          </div>
+
+          <hr class="my-3">
+          <div>
+            <label class="form-label small-muted mb-1">Daily Goal (minutes)</label>
+            <div class="d-flex gap-2 align-items-center">
+              <input id="dailyGoalInput" class="form-control form-control-sm w-50" type="number" min="0" placeholder="e.g., 120">
+              <button id="saveGoalBtn" class="btn btn-sm btn-accent">Save</button>
+            </div>
+            <div class="mt-3">
+              <div class="d-flex justify-content-between small-muted">
+                <div>Today</div>
+                <div id="todayMinutes">0m</div>
+              </div>
+              <div class="progress mt-1" style="height:10px;">
+                <div id="goalProgress" class="progress-bar" role="progressbar" style="width:0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <hr class="my-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="small-muted">Streak</div>
+              <div class="stat" id="streakCount">0</div>
+            </div>
+            <div>
+              <div class="small-muted">Total Hours</div>
+              <div class="stat" id="totalHours">0h</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stopwatch Card -->
+        <div class="card p-3 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="h6 mb-0">Stopwatch</div>
+              <div class="note">Use it to record a focused study session</div>
+            </div>
+            <div><i class="bi bi-stopwatch" style="font-size:1.6rem;color:var(--accent)"></i></div>
+          </div>
+
+          <div class="text-center my-3">
+            <div id="stopwatchDisplay" style="font-size:1.8rem;font-weight:700;color:white">00:00:00</div>
+            <div class="small-muted">hh:mm:ss</div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button id="startBtn" class="btn btn-accent w-100"><i class="bi bi-play-fill"></i> Start</button>
+            <button id="pauseBtn" class="btn btn-outline-light w-100"><i class="bi bi-pause-fill"></i> Pause</button>
+            <button id="resetBtn" class="btn btn-outline-light w-100"><i class="bi bi-arrow-clockwise"></i> Reset</button>
+          </div>
+
+          <hr class="my-3">
+
+          <div>
+            <label class="form-label small-muted">Subject</label>
+            <select id="swSubject" class="form-select form-select-sm mb-2">
+              <option value="General">General</option>
+              <option value="Math">Math</option>
+              <option value="Science">Science</option>
+              <option value="Languages">Languages</option>
+              <option value="Other">Other</option>
+            </select>
+
+            <label class="form-label small-muted">Note (optional)</label>
+            <input id="swNote" class="form-control form-control-sm mb-2" placeholder="what did you study?">
+
+            <button id="saveSessionBtn" class="btn btn-sm btn-accent w-100">Save Session</button>
+          </div>
+        </div>
+
+        <!-- Manual Entry Card -->
+        <div class="card p-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="h6 mb-0">Quick Add</div>
+              <div class="note">Add minutes manually</div>
+            </div>
+            <div class="chip"><i class="bi bi-plus-lg"></i></div>
+          </div>
+
+          <div class="mt-3">
+            <label class="form-label small-muted">Date</label>
+            <input id="entryDate" type="date" class="form-control form-control-sm mb-2">
+
+            <label class="form-label small-muted">Minutes</label>
+            <input id="entryMinutes" type="number" class="form-control form-control-sm mb-2" placeholder="e.g., 45">
+
+            <label class="form-label small-muted">Subject</label>
+            <select id="entrySubject" class="form-select form-select-sm mb-2">
+              <option>General</option><option>Math</option><option>Science</option><option>Languages</option><option>Other</option>
+            </select>
+
+            <button id="addEntryBtn" class="btn btn-sm btn-accent w-100">Add Entry</button>
+            <div class="d-flex gap-2 mt-2">
+              <button id="exportCsvBtn" class="btn btn-outline-light btn-sm w-50"><i class="bi bi-download"></i> Export CSV</button>
+              <button id="clearAllBtn" class="btn btn-outline-danger btn-sm w-50">Clear Data</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div class="col-lg-8">
+        <div class="card p-3 mb-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="h5 mb-0">Dashboard</div>
+              <div class="small-muted">Visual analysis of your study hours</div>
+            </div>
+
+            <div class="d-flex gap-2 align-items-center">
+              <select id="rangeSelect" class="form-select form-select-sm">
+                <option value="30">Last 30 days</option>
+                <option value="7">Last 7 days</option>
+                <option value="90">Last 90 days</option>
+                <option value="365">Last Year</option>
+              </select>
+              <button id="refreshCharts" class="btn btn-sm btn-outline-light"><i class="bi bi-arrow-clockwise"></i></button>
+            </div>
+          </div>
+
+          <div class="row mt-3">
+            <div class="col-md-8">
+              <canvas id="timeChart" height="180"></canvas>
+            </div>
+            <div class="col-md-4">
+              <canvas id="subjectPie" height="180"></canvas>
+            </div>
+          </div>
+
+          <hr class="my-3">
+          <div class="d-flex justify-content-between">
+            <div>
+              <div class="small-muted">Recent sessions</div>
+              <ul id="recentList" class="list-group list-group-flush mt-2"></ul>
+            </div>
+
+            <div style="min-width:220px">
+              <div class="small-muted">Summary</div>
+              <div class="mt-2">
+                <div class="mb-2"><strong>Total Minutes:</strong> <span id="summaryMinutes">0</span>m</div>
+                <div class="mb-2"><strong>Sessions:</strong> <span id="summarySessions">0</span></div>
+                <div class="mb-2"><strong>Avg / day:</strong> <span id="summaryAvg">0</span>m</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROFILE MODAL -->
+  <div class="modal fade" id="profileModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content bg-transparent border-0">
+        <div class="card p-3">
+          <div class="modal-header border-0">
+            <h5 class="modal-title">Edit Profile</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <label class="form-label small-muted">Student Name</label>
+            <input id="studentNameInput" class="form-control mb-2" placeholder="Your name">
+
+            <label class="form-label small-muted">Initials (for avatar)</label>
+            <input id="studentInitialInput" class="form-control mb-2" placeholder="E.g., SB">
+
+            <div class="d-flex gap-2 mt-3">
+              <button id="saveProfileBtn" class="btn btn-accent w-100">Save</button>
+              <button class="btn btn-outline-light w-100" data-bs-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="container">
+      <small>EduTracker • Designed for students • Created by Subham Behera •</small>
+    </div>
+  </footer>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    /* ===========================
+       Local Storage Keys & Data
+       =========================== */
+    const STORAGE_KEY = 'edutracker_sessions_v1';
+    const PROFILE_KEY = 'edutracker_profile_v1';
+    const GOAL_KEY = 'edutracker_goal_v1';
+
+    // Application State
+    let sessions = []; // array of {date: 'YYYY-MM-DD', minutes: Number, subject, note, timestamp}
+    let profile = { name: 'Guest Student', initials: 'ET' };
+    let dailyGoal = 0;
+
+    // Chart instances
+    let timeChart = null;
+    let subjectPie = null;
+
+    // Stopwatch state
+    let swRunning = false;
+    let swStart = 0;
+    let swElapsed = 0; // ms
+    let swInterval = null;
+
+    // Utils
+    const todayStr = () => new Date().toISOString().slice(0,10);
+
+    // Load data from localStorage
+    function loadFromStorage(){
+      const raw = localStorage.getItem(STORAGE_KEY);
+      sessions = raw ? JSON.parse(raw) : [];
+      const p = localStorage.getItem(PROFILE_KEY);
+      profile = p ? JSON.parse(p) : profile;
+      const g = localStorage.getItem(GOAL_KEY);
+      dailyGoal = g ? Number(g) : 0;
+    }
+
+    function saveToStorage(){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+    }
+    function saveProfile(){
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    }
+    function saveGoal(){
+      localStorage.setItem(GOAL_KEY, String(dailyGoal));
+    }
+
+    /* ========================
+       UI Helper Functions
+       ======================== */
+    function setProfileUI(){
+      document.getElementById('studentNameDisplay').innerText = profile.name || 'Guest Student';
+      document.getElementById('studentNameCard').innerText = profile.name || 'Guest Student';
+      document.getElementById('studentNameInput').value = profile.name || '';
+      document.getElementById('studentInitialInput').value = profile.initials || '';
+      document.getElementById('profileInitial').innerText = (profile.initials || 'ET').slice(0,2).toUpperCase();
+      document.getElementById('profileInitial').style.background = "linear-gradient(135deg,#2b4a86,#7b64e6)";
+    }
+
+    function updateSummaryAndStats(){
+      const totalMin = sessions.reduce((s,x)=>s+x.minutes,0);
+      document.getElementById('summaryMinutes').innerText = totalMin;
+      document.getElementById('summarySessions').innerText = sessions.length;
+      // avg per day (over last 30 days)
+      const days = 30;
+      const avg = Math.round((totalMin / days) || 0);
+      document.getElementById('summaryAvg').innerText = avg;
+
+      document.getElementById('totalHours').innerText = (totalMin/60).toFixed(1) + 'h';
+
+      // Today's minutes
+      const todayMin = sessions.filter(s => s.date === todayStr()).reduce((a,b)=>a+b.minutes,0);
+      document.getElementById('todayMinutes').innerText = todayMin + 'm';
+
+      // Goal progress
+      let pct = dailyGoal > 0 ? Math.min(100, Math.round((todayMin/dailyGoal)*100)) : 0;
+      document.getElementById('goalProgress').style.width = pct + '%';
+      document.getElementById('goalProgress').innerText = pct + '%';
+
+      // Streak (consecutive days with >0 minutes)
+      const streak = calcStreak();
+      document.getElementById('streakCount').innerText = streak;
+    }
+
+    function calcStreak(){
+      // build a set of dates with study
+      const datesSet = new Set(sessions.filter(s=>s.minutes>0).map(s=>s.date));
+      let count = 0;
+      let d = new Date();
+      while(true){
+        const s = d.toISOString().slice(0,10);
+        if(datesSet.has(s)) {
+          count++;
+          d.setDate(d.getDate() - 1);
+        } else break;
+      }
+      return count;
+    }
+
+    /* =========================
+       Session Management
+       ========================= */
+    function addSession({date, minutes, subject='General', note=''}) {
+      if(!date) date = todayStr();
+      minutes = Number(minutes) || 0;
+      if(minutes <= 0) return;
+      sessions.push({ date, minutes, subject, note, timestamp: new Date().toISOString() });
+      // keep sessions sorted by timestamp descending
+      sessions.sort((a,b)=> new Date(b.timestamp) - new Date(a.timestamp));
+      saveToStorage();
+      refreshAll();
+    }
+
+    function clearAllData(){
+      if(!confirm('Delete all EduTracker data from this browser? This cannot be undone.')) return;
+      sessions = [];
+      saveToStorage();
+      refreshAll();
+    }
+
+    /* =========================
+       Stopwatch Controls
+       ========================= */
+    function formatTime(ms){
+      let s = Math.floor(ms/1000);
+      const hh = String(Math.floor(s/3600)).padStart(2,'0');
+      s %= 3600;
+      const mm = String(Math.floor(s/60)).padStart(2,'0');
+      const ss = String(s % 60).padStart(2,'0');
+      return `${hh}:${mm}:${ss}`;
+    }
+
+    function startStopwatch(){
+      if(swRunning) return;
+      swRunning = true;
+      swStart = Date.now() - swElapsed;
+      swInterval = setInterval(()=> {
+        swElapsed = Date.now() - swStart;
+        document.getElementById('stopwatchDisplay').innerText = formatTime(swElapsed);
+      }, 250);
+    }
+    function pauseStopwatch(){
+      if(!swRunning) return;
+      swRunning = false;
+      clearInterval(swInterval);
+      swInterval = null;
+      swElapsed = Date.now() - swStart;
+      document.getElementById('stopwatchDisplay').innerText = formatTime(swElapsed);
+    }
+    function resetStopwatch(){
+      swRunning = false;
+      clearInterval(swInterval);
+      swInterval = null;
+      swElapsed = 0;
+      swStart = 0;
+      document.getElementById('stopwatchDisplay').innerText = '00:00:00';
+    }
+
+    function saveStopwatchSession(){
+      const minutes = Math.round(swElapsed/60000);
+      if(minutes <= 0) { alert('Stopwatch has 0 minutes. Start timer before saving.'); return; }
+      const subject = document.getElementById('swSubject').value;
+      const note = document.getElementById('swNote').value || '';
+      addSession({ date: todayStr(), minutes, subject, note });
+      resetStopwatch();
+      alert('Session saved: ' + minutes + ' minutes');
+    }
+
+    /* =========================
+       Charts
+       ========================= */
+    function buildTimeSeries(daysBack){
+      // build daily totals for the range daysBack
+      const result = [];
+      const end = new Date();
+      for(let i = daysBack-1; i >= 0; i--){
+        const d = new Date();
+        d.setDate(end.getDate() - i);
+        const key = d.toISOString().slice(0,10);
+        const total = sessions.filter(s => s.date === key).reduce((a,b)=>a+b.minutes,0);
+        result.push({ date: key, minutes: total });
+      }
+      return result;
+    }
+
+    function buildSubjectTotals(rangeDays=365){
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - rangeDays);
+      const totals = {};
+      for(const s of sessions){
+        if(new Date(s.timestamp) < cutoff) continue;
+        totals[s.subject] = (totals[s.subject] || 0) + s.minutes;
+      }
+      return totals;
+    }
+
+    function renderCharts(){
+      const days = Number(document.getElementById('rangeSelect').value);
+      const series = buildTimeSeries(days);
+      const labels = series.map(s => s.date);
+      const data = series.map(s => +(s.minutes/60).toFixed(2)); // hours
+
+      // Time Chart (line)
+      const ctx = document.getElementById('timeChart').getContext('2d');
+      if(timeChart) timeChart.destroy();
+      timeChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Hours studied',
+            data,
+            borderRadius: 6,
+            borderWidth: 0,
+            maxBarThickness: 24,
+            backgroundColor: function(ctx) {
+              // highlight today
+              const idx = ctx.dataIndex;
+              return (labels[idx] === todayStr()) ? 'rgba(108,140,255,0.95)' : 'rgba(108,140,255,0.6)';
+            }
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { color: '#cfe0ff' },
+              grid: { color: 'rgba(255,255,255,0.03)' }
+            },
+            x: {
+              ticks: { color: '#cfe0ff' },
+              grid: { color: 'transparent' }
+            }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${(ctx.raw).toFixed(2)} h = ${Math.round(ctx.raw*60)} m`
+              }
+            }
+          }
+        }
+      });
+
+      // Subject Pie
+      const pieCtx = document.getElementById('subjectPie').getContext('2d');
+      const subjectTotals = buildSubjectTotals(days);
+      const subjects = Object.keys(subjectTotals);
+      const subsData = Object.values(subjectTotals);
+      if(subjectPie) subjectPie.destroy();
+      subjectPie = new Chart(pieCtx, {
+        type: 'pie',
+        data: {
+          labels: subjects,
+          datasets: [{
+            data: subsData,
+            backgroundColor: subjects.map((_,i) => `hsl(${(i*55)%360} 80% 60% / 0.85)`),
+            hoverOffset: 6
+          }]
+        },
+        options: {
+          plugins: { legend: { position: 'bottom', labels: { color: '#d9e7ff' } } }
+        }
+      });
+    }
+
+    /* =========================
+       Recent List
+       ========================= */
+    function renderRecentList(){
+      const list = document.getElementById('recentList');
+      list.innerHTML = '';
+      const recent = sessions.slice(0,7);
+      for(const s of recent){
+        const li = document.createElement('li');
+        li.className = 'list-group-item bg-transparent border-0 p-2';
+        li.innerHTML = `
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <div style="font-weight:600;color:white">${s.subject} <span class="small-muted">• ${s.date}</span></div>
+              <div class="note">${s.note || '—'}</div>
+            </div>
+            <div style="text-align:right">
+              <div class="stat">${s.minutes}m</div>
+              <div class="small-muted">${new Date(s.timestamp).toLocaleTimeString()}</div>
+            </div>
+          </div>
+        `;
+        list.appendChild(li);
+      }
+    }
+
+    /* =========================
+       CSV Export
+       ========================= */
+    function exportCSV(){
+      if(sessions.length === 0){ alert('No sessions to export'); return; }
+      const header = ['date','minutes','subject','note','timestamp'];
+      const rows = sessions.map(s => [s.date, s.minutes, `"${s.subject}"`, `"${(s.note||'').replace(/"/g,'""')}"`, s.timestamp]);
+      const csv = [header.join(','), ...rows.map(r=>r.join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `edutracker_sessions_${todayStr()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    /* =========================
+       UI Wiring & Events
+       ========================= */
+    document.addEventListener('DOMContentLoaded', () => {
+      // load
+      loadFromStorage();
+
+      // init inputs
+      document.getElementById('entryDate').value = todayStr();
+      document.getElementById('dailyGoalInput').value = dailyGoal || '';
+      setProfileUI();
+      updateSummaryAndStats();
+
+      // render charts
+      renderCharts();
+      renderRecentList();
+
+      // profile save
+      document.getElementById('saveProfileBtn').addEventListener('click', () => {
+        const name = document.getElementById('studentNameInput').value.trim() || 'Guest Student';
+        const initials = (document.getElementById('studentInitialInput').value.trim() || name.slice(0,2)).toUpperCase();
+        profile = { name, initials };
+        saveProfile();
+        setProfileUI();
+        const modal = bootstrap.Modal.getInstance(document.getElementById('profileModal'));
+        if(modal) modal.hide();
+      });
+
+      // save daily goal
+      document.getElementById('saveGoalBtn').addEventListener('click', () => {
+        const v = Number(document.getElementById('dailyGoalInput').value) || 0;
+        dailyGoal = v;
+        saveGoal();
+        alert('Daily goal saved: ' + dailyGoal + ' minutes');
+        updateSummaryAndStats();
+      });
+
+      // stopwatch buttons
+      document.getElementById('startBtn').addEventListener('click', startStopwatch);
+      document.getElementById('pauseBtn').addEventListener('click', pauseStopwatch);
+      document.getElementById('resetBtn').addEventListener('click', resetStopwatch);
+      document.getElementById('saveSessionBtn').addEventListener('click', saveStopwatchSession);
+
+      // quick add
+      document.getElementById('addEntryBtn').addEventListener('click', () => {
+        const date = document.getElementById('entryDate').value;
+        const minutes = Number(document.getElementById('entryMinutes').value) || 0;
+        const subj = document.getElementById('entrySubject').value;
+        if(!minutes || minutes <= 0){ alert('Enter a positive minutes value'); return; }
+        addSession({ date, minutes, subject: subj });
+        // reset minutes
+        document.getElementById('entryMinutes').value = '';
+      });
+
+      // export
+      document.getElementById('exportCsvBtn').addEventListener('click', exportCSV);
+      // clear
+      document.getElementById('clearAllBtn').addEventListener('click', clearAllData);
+
+      // refresh charts
+      document.getElementById('refreshCharts').addEventListener('click', () => { renderCharts(); updateSummaryAndStats(); renderRecentList(); });
+
+      // range select
+      document.getElementById('rangeSelect').addEventListener('change', renderCharts);
+
+      // initial UI updates
+      updateSummaryAndStats();
+      renderCharts();
+      renderRecentList();
+    });
+
+    // hook into data changes via addSession/saveToStorage to re-render
+    const originalAddSession = addSession;
+    addSession = function(obj){
+      originalAddSession(obj);
+      // refresh UI pieces
+      setTimeout(()=> {
+        updateSummaryAndStats();
+        renderCharts();
+        renderRecentList();
+      }, 60);
+    };
+
+    // Keep UI in sync on page show (useful if user uses other tabs)
+    window.addEventListener('storage', (e)=> {
+      if(e.key === STORAGE_KEY || e.key === PROFILE_KEY || e.key === GOAL_KEY){
+        loadFromStorage();
+        setProfileUI();
+        updateSummaryAndStats();
+        renderCharts();
+        renderRecentList();
+      }
+    });
+  </script>
+</body>
+</html>
